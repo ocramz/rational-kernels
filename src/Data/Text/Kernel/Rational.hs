@@ -103,7 +103,15 @@ pathsConnecting p q gr = filter (== q) $ reachable p gr
 how to test whether a string belongs to the Kleene star of an alphabet?
 --}
 
-kleene alpha = map (\a -> a : concat (kleene alpha)) alpha
+-- kleene alpha = go 0 []
+--   where
+--     go i acc = map (\a -> a : acc) alpha : go (i + 1)
+
+-- kleene alpha = go []
+--   where
+--     go acc = let l = map (: acc) alpha in go l 
+
+-- [[], [1], [2], ..., [N], [1,1], [1,2], ..., [1,N], [1,1,1], [1,1,2], ...]
 
 
 -- transducerWeight1 path rk = l <.> w <.> r
