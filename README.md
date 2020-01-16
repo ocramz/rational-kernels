@@ -1,2 +1,5 @@
 # rational-kernels
-Extending kernel methods to variable-lenght sequences
+
+[![Build Status](https://travis-ci.org/ocramz/rational-kernels.png)](https://travis-ci.org/ocramz/rational-kernels)
+
+TODO Description.
