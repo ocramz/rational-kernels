@@ -8,14 +8,16 @@
 -- Maintainer : ocramz
 -- Stability  : experimental
 --
--- Rational kernels
+-- Rational kernels, as defined in [1]
+--
+-- C. Cortes, P. Haffner, M. Mohri - Rational kernels : theory and algorithms - JMLR 1 (2004) 1-50
 -----------------------------------------------------------------------------
 module Data.Text.Kernel.Rational where
 
-import Data.List (unfoldr)
+-- import Control.Category (Category(..))
+-- import Data.List (unfoldr)
 import Data.Maybe (listToMaybe)
 import Data.Semigroup (Semigroup(..))
-
 
 -- algebraic-graphs
 import Algebra.Graph.ToGraph (ToGraph(..))
@@ -27,56 +29,54 @@ import qualified Data.Set as S (Set, fromList, toList)
 -- import Lens.Micro
 -- microlens-th
 import Lens.Micro.TH (makeLenses)
--- -- semirings
--- import Data.Semiring (Semiring(..), sum, product)
 
-
+-- import Prelude hiding (sum, product, id, (.))
 import Prelude hiding (sum, product)
 
 
 
 data Transition i o w = Transition {
   _transitionInput :: i
-  , _transitionOutput :: o 
-  , _transitionWeight :: w
-                                   } deriving (Eq, Show)
+  , _transitionOutput :: o
+  , _transitionWeight :: w } deriving (Eq, Show)
 makeLenses ''Transition
 
-instance Semigroup (Transition i o w)
-instance Monoid (Transition i o w)
+instance Semigroup (Transition i o w) -- FIXME
+instance Monoid (Transition i o w)  -- FIXME
 
 product, sum :: (Foldable t, Semiring b) => t b -> b
 product = foldl (<.>) one
 sum = foldl (<+>) zero
 
-
-
-
-
-data RationalKernel i o w s = RK {
-    _rkGraph :: GL.Graph (Transition i o w) s
-  , _rkInitWeightFunction :: s -> w
-  , _rkFinalWeightFunction :: s -> w
+-- | Weighted finite-state transducer
+data WFST w s i o = WFST {
+    _wfstGraph :: GL.Graph (Transition i o w) s -- ^ Transition graph
+  , _wfstInitWeightFunction :: s -> w -- ^ Initial weight function 
+  , _wfstFinalWeightFunction :: s -> w  -- ^ Final weight function
                                   }
-makeLenses ''RationalKernel
+makeLenses ''WFST
 
-transition :: (Ord c, Eq i, Eq o, Eq w) =>
+-- instance Category (WFST w s) where  -- FIXME
+
+transition :: (Monoid i, Monoid o, Monoid w, Ord c, Eq i, Eq o, Eq w) =>
               Transition i o w
-           -> RationalKernel i o w c
+           -> WFST w c i o
            -> Maybe (Transition i o w, c, c)
-transition e (RK g _ _) = listToMaybe $ filter (\(l, _, _) -> l == e) $ GL.edgeList g
+transition e (WFST g _ _) = listToMaybe $ filter (\(l, _, _) -> l == e) $ GL.edgeList g
 
-origin, destination :: (Ord s, Eq i, Eq o, Eq w) =>
+
+origin, destination :: (Monoid i, Monoid o, Monoid w, Ord c, Eq i, Eq o, Eq w) =>
                        Transition i o w
-                    -> RationalKernel i o w s
-                    -> Maybe s
+                    -> WFST w c i o
+                    -> Maybe c
 origin e rk = (\(_, x, _) -> x) <$> transition e rk
 destination e rk = (\(_, _, y) -> y) <$> transition e rk
 
-weight :: (Ord c, Eq i, Eq o, Eq w) =>
-          Transition i o w
-       -> RationalKernel i o w c
-       -> Maybe w
+
+weight :: (Monoid i, Monoid o, Monoid b, Ord c, Eq i, Eq o, Eq b) =>
+          Transition i o b
+       -> WFST b c i o
+       -> Maybe b
 weight e rk = (\(w, _, _) -> _transitionWeight w) <$> transition e rk
 
 -- pathOrigin, pathDestination :: (Ord s, Eq i, Eq o, Eq w) =>
@@ -89,26 +89,26 @@ weight e rk = (\(w, _, _) -> _transitionWeight w) <$> transition e rk
 -- pathDestination [] rk = Nothing
 
 pathWeight :: Semiring w => [Transition i o w] -> w
-pathWeight = product . map _transitionWeight
+pathWeight ts = product (map _transitionWeight ts)
 
-lambda, rho :: RationalKernel i o w s -> s -> w
-lambda = _rkInitWeightFunction
-rho = _rkFinalWeightFunction
+lambda, rho :: WFST w s i o  -> s -> w
+lambda = _wfstInitWeightFunction
+rho = _wfstFinalWeightFunction
 
 
-pathsConnecting :: (Eq e, Monoid e, Ord v) => v -> v -> GL.Graph e v -> [v]
-pathsConnecting p q gr = filter (== q) $ reachable p gr
+verticesConnecting :: (Eq e, Monoid e, Ord v) => v -> v -> GL.Graph e v -> [v]
+verticesConnecting p q gr = filter (== q) $ reachable p gr
 
 
 {-
 how to test whether a string belongs to the Kleene star of an alphabet?
 --}
 
-kleene n alpha = unfoldr f []
-  where
-    f acc
-      | length acc < n = let acc' = alpha : acc in Just (concat acc' , acc')
-      | otherwise = Nothing
+-- kleene n alpha = unfoldr f []
+--   where
+--     f acc
+--       | length acc < n = let acc' = alpha : acc in Just (concat acc' , acc')
+--       | otherwise = Nothing
 
 -- kleene alpha = go 0 []
 --   where
