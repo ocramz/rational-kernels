@@ -12,6 +12,7 @@
 -----------------------------------------------------------------------------
 module Data.Text.Kernel.Rational where
 
+import Data.List (unfoldr)
 import Data.Maybe (listToMaybe)
 import Data.Semigroup (Semigroup(..))
 
@@ -102,6 +103,12 @@ pathsConnecting p q gr = filter (== q) $ reachable p gr
 {-
 how to test whether a string belongs to the Kleene star of an alphabet?
 --}
+
+kleene n alpha = unfoldr f []
+  where
+    f acc
+      | length acc < n = let acc' = alpha : acc in Just (concat acc' , acc')
+      | otherwise = Nothing
 
 -- kleene alpha = go 0 []
 --   where
